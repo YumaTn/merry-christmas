@@ -93,7 +93,7 @@ class Particle {
     const h = CONFIG.particles.treeHeight;
     let t = Math.random();
     
-    // Logic xếp cây thông
+    // Logic xếp cây thông: Chừa chỗ cho quà và gấu ở dưới đáy
     if (Math.random() > 0.7 && !this.isDust && this.type !== 'PHOTO' && this.type !== 'GIFT' && this.type !== 'BEAR') {
       const y = (t * h) - h / 2;
       const angle = t * Math.PI * 14; 
@@ -136,6 +136,7 @@ class Particle {
         if (this.isTextParticle) {
             s = this.baseScale * 2.5; 
         } else {
+            // Hạt thừa (Gấu, Quà, Bụi...) sẽ ẩn đi khi hiện chữ
             s = 0; 
         }
     }
@@ -190,6 +191,7 @@ class Particle {
       if (this.isDust) s = this.baseScale * (0.5 + 0.5 * Math.sin(time * 3 + this.offset));
       else if ((mode === 'SCATTER' || mode === 'LETTER') && this.type === 'PHOTO') s = this.baseScale * 2.5;
       else if (this.type === 'GIFT' || this.type === 'BEAR') {
+         // Gấu và quà khi bung ra sẽ to hơn xíu cho đẹp
          s = this.baseScale;
          if (mode === 'SCATTER') s = this.baseScale * 1.2;
       }
@@ -220,7 +222,7 @@ const ChristmasTree: React.FC = () => {
     rotation: { x: 0, y: 0 }, spinVel: { x: 0, y: 0 }, time: 0,
     wasPointing: false, palmCenter: { x: 0.5, y: 0.5 }, hasPalmCenter: false,
     starMesh: null, starHaloMesh: null,
-    letterContent: "Trong khoảnh khắc đặc biệt này,\ntôi muốn nói với bạn rằng,\nbạn chính là dải ngân hà lấp lánh trong mắt tôi.",
+    letterContent: "Giáng sinh này anh không cần quà gì sang chảnh đâu, chỉ cần em 'ship' cho anh một chút quan tâm là đủ ấm rồi. Chúc em Noel vui vẻ và bớt đáng yêu lại chút nhé, không là anh không thoát ra khỏi cái sự mập mờ này được đâu!",
     letterLastTriggerTime: 0, musicData: null
   });
 
@@ -495,6 +497,7 @@ const ChristmasTree: React.FC = () => {
       T.particleSystem.push(new Particle(mesh, 'DUST', true));
     }
 
+    // --- GENERATE NAME TEXT (SỬA LỖI GẤU DÍNH CHỮ) ---
     const generateNameText = () => {
       const width = 400; const height = 200;
       const textCanvas = document.createElement('canvas');
@@ -516,14 +519,29 @@ const ChristmasTree: React.FC = () => {
               }
           }
       }
-      const shuffledParticles = [...T.particleSystem].sort(() => 0.5 - Math.random());
-      shuffledParticles.forEach((p, i) => {
+      
+      // LỌC: Chỉ lấy hạt thường để xếp chữ, loại bỏ Gấu/Quà
+      const textCandidates = T.particleSystem.filter(p => p.type !== 'GIFT' && p.type !== 'BEAR' && p.type !== 'PHOTO');
+      const others = T.particleSystem.filter(p => p.type === 'GIFT' || p.type === 'BEAR' || p.type === 'PHOTO');
+
+      // Xáo trộn hạt thường
+      textCandidates.sort(() => 0.5 - Math.random());
+
+      // Gán vị trí chữ
+      textCandidates.forEach((p, i) => {
           if (i < pixels.length) { p.posText.copy(pixels[i]); p.isTextParticle = true; } 
           else {
               const r = 30 + Math.random() * 20; const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
               p.posText.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
               p.isTextParticle = false; 
           }
+      });
+
+      // Gấu và quà auto bay lơ lửng, ko xếp chữ
+      others.forEach(p => {
+          const r = 30 + Math.random() * 20; const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
+          p.posText.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+          p.isTextParticle = false;
       });
     };
     generateNameText();
@@ -545,7 +563,7 @@ const ChristmasTree: React.FC = () => {
     const halo = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ map: haloTexture, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.5, color: 0xffaa00, side: THREE.DoubleSide }));
     star.add(halo); T.starGroup.add(star); STATE.starMesh = star; STATE.starHaloMesh = halo;
 
-    // --- INIT MEDIAPIPE (FIXED) ---
+    // --- INIT MEDIAPIPE ---
     const initMP = async () => {
       try {
         console.log("Loading MediaPipe...");
