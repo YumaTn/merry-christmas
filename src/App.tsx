@@ -222,7 +222,7 @@ const ChristmasTree: React.FC = () => {
     rotation: { x: 0, y: 0 }, spinVel: { x: 0, y: 0 }, time: 0,
     wasPointing: false, palmCenter: { x: 0.5, y: 0.5 }, hasPalmCenter: false,
     starMesh: null, starHaloMesh: null,
-    letterContent: "Giáng sinh này anh không cần quà gì sang chảnh đâu, chỉ cần em 'ship' cho anh một chút quan tâm là đủ ấm rồi. Chúc em Noel vui vẻ và bớt đáng yêu lại chút nhé, không là anh không thoát ra khỏi cái sự mập mờ này được đâu!",
+    letterContent: "G Giáng sinh này anh không cần quà gì sang chảnh đâu, chỉ cần em 'ship' cho anh một chút quan tâm là đủ ấm rồi. Chúc em Noel vui vẻ và bớt đáng yêu lại chút nhé, không là anh không thoát ra khỏi cái sự mập mờ này được đâu!",
     letterLastTriggerTime: 0, musicData: null
   });
 
@@ -507,7 +507,7 @@ const ChristmasTree: React.FC = () => {
       tCtx.fillStyle = '#000000'; tCtx.fillRect(0, 0, width, height);
       tCtx.fillStyle = '#ffffff'; tCtx.font = 'bold 120px "Times New Roman", serif'; 
       tCtx.textAlign = 'center'; tCtx.textBaseline = 'middle';
-      tCtx.fillText("Nhiên", width / 2, height / 2);
+      tCtx.fillText("Nam", width / 2, height / 2);
       const imgData = tCtx.getImageData(0, 0, width, height);
       const pixels: THREE.Vector3[] = [];
       for (let y = 0; y < height; y += 1) {
