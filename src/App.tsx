@@ -569,31 +569,59 @@ const ChristmasTree: React.FC = () => {
         console.log("Loading MediaPipe...");
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
         mpRefs.current.handLandmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
-          runningMode: "VIDEO", numHands: 1, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5
+          baseOptions: {
+            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numHands: 1,
+          minHandDetectionConfidence: 0.3, // Giảm độ tin cậy để dễ nhận diện hơn
+          minHandPresenceConfidence: 0.3,  // Giảm độ tin cậy
+          minTrackingConfidence: 0.3       // Giảm độ tin cậy
         });
-        
+
+        console.log("MediaPipe initialized successfully");
+
         // Setup Canvas Context
         if (canvasRef.current) {
             mpRefs.current.canvasCtx = canvasRef.current.getContext('2d');
             mpRefs.current.drawingUtils = new DrawingUtils(mpRefs.current.canvasCtx!);
+            console.log("Canvas context initialized");
         }
 
         if (navigator.mediaDevices?.getUserMedia) {
-           const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } });
-           if (videoRef.current) {
+          console.log("Requesting camera access...");
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          });
+          console.log("Camera access granted");
+
+          if (videoRef.current) {
              videoRef.current.srcObject = stream;
-             // Sửa lỗi: dùng onloadeddata thay vì onloadedmetadata để chắc chắn video đã có dữ liệu
              videoRef.current.onloadeddata = () => {
+                console.log("Video loaded, starting playback");
                 videoRef.current!.play();
                 setShowWebcam(true);
                 setIsLoading(false);
              };
+
+             videoRef.current.onerror = (e) => {
+                console.error("Video error:", e);
+                setIsLoading(false);
+             };
            }
+        } else {
+          console.error("getUserMedia not supported");
+          setIsLoading(false);
         }
-      } catch (e) { 
-          console.error("Lỗi khởi tạo:", e);
-          setIsLoading(false); // Tắt loading kể cả khi lỗi
+      } catch (e) {
+          console.error("Lỗi khởi tạo MediaPipe:", e);
+          setIsLoading(false);
+          alert("Không thể khởi tạo camera. Vui lòng kiểm tra quyền truy cập camera và thử lại.");
       }
     };
     initMP();
@@ -605,36 +633,71 @@ const ChristmasTree: React.FC = () => {
       const dt = T.clock.getDelta();
       STATE.time = T.clock.elapsedTime;
 
-      // --- SỬA LỖI NHẬN DIỆN: Kiểm tra trực tiếp videoRef thay vì biến showWebcam ---
-      // Dùng videoRef.current.readyState >= 2 để đảm bảo video đã load đủ data
-      // Bọc try-catch để tránh crash
+      // --- NHẬN DIỆN BÀN TAY ---
       try {
           if (mpRefs.current.handLandmarker && videoRef.current && canvasRef.current && !videoRef.current.paused && videoRef.current.readyState >= 2) {
                 const vWidth = videoRef.current.videoWidth;
                 const vHeight = videoRef.current.videoHeight;
+
+                // Cập nhật kích thước canvas nếu cần
                 if (canvasRef.current.width !== vWidth || canvasRef.current.height !== vHeight) {
-                    canvasRef.current.width = vWidth; canvasRef.current.height = vHeight;
+                    canvasRef.current.width = vWidth;
+                    canvasRef.current.height = vHeight;
+                    console.log(`Canvas resized to ${vWidth}x${vHeight}`);
                 }
 
+                // Chỉ xử lý frame mới
                 if (videoRef.current.currentTime !== mpRefs.current.lastVideoTime) {
                     mpRefs.current.lastVideoTime = videoRef.current.currentTime;
+
+                    // Phát hiện bàn tay
                     const result = mpRefs.current.handLandmarker.detectForVideo(videoRef.current, performance.now());
+
                     const ctx = mpRefs.current.canvasCtx;
                     if (ctx) {
-                        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                        // Vẽ video lên canvas trước
+                        ctx.drawImage(videoRef.current, 0, 0, vWidth, vHeight);
+
                         if (result.landmarks && result.landmarks.length > 0) {
-                            // VẼ KHUNG XƯƠNG
-                            mpRefs.current.drawingUtils?.drawConnectors(result.landmarks[0], HandLandmarker.HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
-                            mpRefs.current.drawingUtils?.drawLandmarks(result.landmarks[0], { color: "#FF0000", lineWidth: 2, radius: 3 });
+                            console.log("Hand detected!", result.landmarks.length, "hands");
+
+                            // VẼ KHUNG XƯƠNG BÀN TAY
+                            mpRefs.current.drawingUtils?.drawConnectors(
+                              result.landmarks[0],
+                              HandLandmarker.HAND_CONNECTIONS,
+                              { color: "#00FF00", lineWidth: 5 }
+                            );
+                            mpRefs.current.drawingUtils?.drawLandmarks(
+                              result.landmarks[0],
+                              { color: "#FF0000", lineWidth: 2, radius: 4 }
+                            );
+
+                            // Thêm text hiển thị trạng thái
+                            ctx.fillStyle = "white";
+                            ctx.font = "16px Arial";
+                            ctx.fillText("Bàn tay được phát hiện", 10, 30);
+
                             processGestures(result.landmarks[0]);
+                            STATE.hand.detected = true;
                         } else {
+                            // Thêm text khi không phát hiện
+                            ctx.fillStyle = "yellow";
+                            ctx.font = "16px Arial";
+                            ctx.fillText("Không phát hiện bàn tay", 10, 30);
                             STATE.hand.detected = false;
                         }
                     }
                 }
+          } else {
+            // Debug thông tin
+            if (!mpRefs.current.handLandmarker) console.log("HandLandmarker not initialized");
+            if (!videoRef.current) console.log("Video ref not available");
+            if (!canvasRef.current) console.log("Canvas ref not available");
+            if (videoRef.current?.paused) console.log("Video is paused");
+            if (videoRef.current && videoRef.current.readyState < 2) console.log("Video not ready:", videoRef.current.readyState);
           }
       } catch (err) {
-          console.warn("MediaPipe Error:", err);
+          console.error("MediaPipe Error:", err);
       }
 
       // Logic Update
