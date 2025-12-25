@@ -105,35 +105,48 @@
 
 /* App.css - Thay thế đoạn cuối cùng */
 
-/* App.css */
-
 .webcam-wrapper {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 200px; /* Thu nhỏ lại góc để dễ nhìn */
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 200px; /* Tăng to lên chút để dễ nhìn */
   height: 150px;
-  z-index: 9999; /* <--- QUAN TRỌNG: Phải cao hơn canvas 3D */
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
+  z-index: 99999 !important;
+  border: 2px solid #ffd700;
+  border-radius: 10px;
   overflow: hidden;
-  opacity: 0; /* Mặc định ẩn */
-  pointer-events: none; /* Để không chặn chuột bấm vào 3D */
+  background: #000;
+  opacity: 0;
   transition: opacity 0.5s;
 }
 
 .webcam-wrapper.visible {
-  opacity: 1; /* Hiện lên khi camera sẵn sàng */
+  opacity: 1;
 }
 
-/* Đảm bảo video và canvas con nằm chồng lên nhau chính xác */
-#webcam, #webcam-preview {
+/* 1. Video nằm ở lớp dưới */
+#webcam {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100% !important;
-  height: 100% !important;
-  transform: scaleX(-1); /* Lật ngược gương giống camera selfie */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  z-index: 1; /* Lớp 1 (Dưới cùng) */
+}
+
+/* 2. Canvas vẽ xương nằm ở lớp trên */
+#webcam-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  pointer-events: none;
+  z-index: 2; /* Lớp 2 (Nằm đè lên Video) - QUAN TRỌNG */
 }
 /* Letter Modal */
 .letter-editor-modal {
