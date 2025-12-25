@@ -507,7 +507,7 @@ const ChristmasTree: React.FC = () => {
       tCtx.fillStyle = '#000000'; tCtx.fillRect(0, 0, width, height);
       tCtx.fillStyle = '#ffffff'; tCtx.font = 'bold 120px "Times New Roman", serif'; 
       tCtx.textAlign = 'center'; tCtx.textBaseline = 'middle';
-      tCtx.fillText("Nam", width / 2, height / 2);
+      tCtx.fillText("Gin", width / 2, height / 2);
       const imgData = tCtx.getImageData(0, 0, width, height);
       const pixels: THREE.Vector3[] = [];
       for (let y = 0; y < height; y += 1) {
